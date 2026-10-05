@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>agent-sdk pimo — a local-first agent runtime you can actually audit</title>
+<meta name="description" content="A private, loopback-only Agent SDK and local agent runtime. Zero runtime dependencies, default-deny capabilities, and verification oracles that fail loudly when the stack is not really up." />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#0d1411" />
+<style>
+/* agent-sdk pimo — matte green, system fonts only, zero external requests. */
+
+:root {
+  --bg:        #0d1411;
+  --bg-2:      #111a16;
+  --surface:   #16211c;
+  --surface-2: #1c2a23;
+  --line:      #24332b;
+  --line-soft: #1c2721;
+
+  --ink:       #e6efe9;
+  --ink-dim:   #a3b8ab;
+  --ink-mute:  #6f8578;
+
+  --green:     #74e0a6;
+  --green-dim: #4bbd83;
+  --green-dk:  #1f5c40;
+  --amber:     #e0c98b;
+  --rose:      #e09a9a;
+
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+
+  --r: 10px;
+  --maxw: 1080px;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* A very quiet matte grain so large dark fields don't band. */
+.grain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .5;
+  background:
+    radial-gradient(1200px 600px at 12% -10%, #16302355, transparent 60%),
+    radial-gradient(900px 500px at 95% 5%, #10281f44, transparent 60%);
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+a { color: var(--green); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+  font-family: var(--mono);
+  font-size: .875em;
+  color: #bfe6d0;
+  background: #16211caa;
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: .12em .38em;
+}
+
+/* ---------- header ---------- */
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 26px;
+  padding-bottom: 26px;
+  flex-wrap: wrap;
+}
+
+.mark { display: inline-flex; align-items: center; gap: 10px; }
+.mark:hover { text-decoration: none; }
+
+.mark-dot {
+  width: 11px; height: 11px;
+  border-radius: 3px;
+  background: var(--green);
+  box-shadow: 0 0 0 4px #74e0a61f, 0 0 18px #74e0a640;
+}
+
+.mark-name {
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: .02em;
+  color: var(--ink);
+}
+.mark-name em { color: var(--green); font-style: normal; }
+
+nav { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+nav a {
+  color: var(--ink-mute);
+  font-size: 13.5px;
+  font-family: var(--mono);
+  letter-spacing: .01em;
+  padding: 5px 0;
+  border-bottom: 1px solid transparent;
+}
+nav a:hover { color: var(--ink); text-decoration: none; border-bottom-color: var(--green-dk); }
+nav .cta {
+  color: #08120d;
+  background: var(--green);
+  border: 1px solid var(--green);
+  border-radius: 999px;
+  padding: 6px 15px;
+  font-weight: 600;
+}
+nav .cta:hover { background: #8cebba; border-bottom-color: transparent; text-decoration: none; }
+
+/* ---------- hero ---------- */
+
+.hero { padding: 76px 28px 68px; max-width: var(--maxw); margin: 0 auto; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--green-dim);
+  margin: 0 0 22px;
+}
+
+h1 {
+  font-size: clamp(2.1rem, 5.4vw, 3.5rem);
+  line-height: 1.1;
+  letter-spacing: -.022em;
+  font-weight: 600;
+  margin: 0 0 24px;
+  text-wrap: balance;
+}
+h1 .dim { color: var(--ink-mute); }
+
+.lede {
+  font-size: 1.09rem;
+  color: var(--ink-dim);
+  max-width: 62ch;
+  margin: 0 0 34px;
+}
+.lede strong { color: var(--ink); font-weight: 600; }
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 12px;
+  margin: 0 0 34px;
+  max-width: 720px;
+}
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 15px 17px;
+}
+.chip b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--green);
+  line-height: 1.1;
+}
+.chip span {
+  display: block;
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  margin-top: 5px;
+  letter-spacing: .01em;
+}
+
+pre.hero-cmd, pre.block, pre.diagram {
+  margin: 0;
+  background: #0a100d;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 18px 20px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink-dim);
+}
+pre code { background: none; border: 0; padding: 0; color: inherit; font-size: inherit; }
+pre .p { color: var(--ink-mute); }
+pre .o { color: var(--ink-mute); }
+pre .ok { color: var(--green); }
+
+/* ---------- bands ---------- */
+
+.band {
+  padding: 66px 28px;
+  border-top: 1px solid var(--line-soft);
+  max-width: var(--maxw);
+  margin: 0 auto;
+}
+
+.band-head { margin-bottom: 34px; }
+.band-head .num {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--green-dim);
+  letter-spacing: .16em;
+}
+.band-head h2 {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -.018em;
+  margin: 8px 0 0;
+}
+.band-sub {
+  color: var(--ink-mute);
+  font-size: 15px;
+  max-width: 66ch;
+  margin: 10px 0 0;
+}
+
+.cols { display: grid; grid-template-columns: 1.15fr .85fr; gap: 42px; }
+.cols p { color: var(--ink-dim); margin: 0 0 16px; max-width: 60ch; }
+
+ul.ticks { list-style: none; margin: 0; padding: 0; }
+ul.ticks li {
+  position: relative;
+  padding-left: 26px;
+  margin-bottom: 15px;
+  color: var(--ink-dim);
+  font-size: 14.6px;
+}
+ul.ticks li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: .58em;
+  width: 9px; height: 9px;
+  border-radius: 2px;
+  background: var(--green-dk);
+  border: 1px solid var(--green-dim);
+}
+ul.ticks li b { color: var(--ink); font-weight: 600; }
+
+.note {
+  color: var(--ink-mute);
+  font-size: 14.6px;
+  max-width: 78ch;
+  margin: 20px 0 0;
+}
+.note em { color: var(--ink-dim); font-style: italic; }
+
+pre.diagram { color: var(--ink-dim); margin-top: 4px; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(258px, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+}
+.cell {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 20px 21px;
+}
+.cell h3 {
+  font-size: 15.5px;
+  font-weight: 600;
+  margin: 0 0 9px;
+  letter-spacing: -.005em;
+}
+.cell p { margin: 0; color: var(--ink-mute); font-size: 14.4px; }
+.cell h3 code { font-size: 13px; }
+
+/* ---------- boundary rules ---------- */
+
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.rule {
+  display: flex;
+  gap: 15px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--green-dk);
+  border-radius: var(--r);
+  padding: 18px 19px;
+}
+.rule-n {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--green-dim);
+  padding-top: 1px;
+}
+.rule h4 {
+  margin: 0 0 7px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.rule p { margin: 0; color: var(--ink-mute); font-size: 14.2px; }
+.rule code { font-size: 12.5px; }
+
+/* ---------- tables ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.4px;
+}
+thead th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 500;
+  padding: 0 14px 11px 0;
+  border-bottom: 1px solid var(--line);
+}
+tbody td {
+  padding: 13px 14px 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--ink-dim);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td.n, th.n { font-family: var(--mono); color: var(--green-dim); width: 34px; }
+table code { font-size: 13px; }
+.oracles td:nth-child(2) { color: var(--ink); }
+.oracles td:nth-child(4) { color: var(--ink-mute); font-size: 13.8px; }
+.doors td:first-child { white-space: nowrap; }
+
+/* ---------- callout ---------- */
+
+.callout {
+  margin-top: 30px;
+  background: var(--surface-2);
+  border: 1px solid var(--green-dk);
+  border-radius: var(--r);
+  padding: 21px 23px;
+}
+.callout h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--green);
+}
+.callout p { margin: 0; color: var(--ink-dim); font-size: 14.6px; max-width: 82ch; }
+.callout code { font-size: 12.8px; }
+.callout em { color: var(--ink); font-style: italic; }
+.callout.warn { border-color: #4a4128; background: #1a1a14; }
+.callout.warn h4 { color: var(--amber); }
+
+/* ---------- footer ---------- */
+
+footer { border-top: 1px solid var(--line-soft); margin-top: 30px; }
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 34px 28px 46px;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+.muted { color: var(--ink-mute); font-size: 13.6px; margin: 8px 0 0; }
+.small { text-align: right; }
+.small p { margin: 3px 0; font-size: 12.6px; }
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 780px) {
+  .cols { grid-template-columns: 1fr; gap: 26px; }
+  .small { text-align: left; }
+  .hero { padding-top: 52px; }
+  .band { padding: 50px 28px; }
+  nav { gap: 15px; }
+  nav a { font-size: 12.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<header class="wrap top">
+  <a class="mark" href="#top">
+    <span class="mark-dot" aria-hidden="true"></span>
+    <span class="mark-name">agent-sdk&nbsp;<em>pimo</em></span>
+  </a>
+  <nav>
+    <a href="#premise">premise</a>
+    <a href="#shape">shape</a>
+    <a href="#boundary">boundary</a>
+    <a href="#doors">doors</a>
+    <a href="#oracles">oracles</a>
+    <a class="cta" href="#install">install</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <section class="hero wrap">
+    <p class="eyebrow">private &middot; local-first &middot; auditable</p>
+    <h1>A local agent runtime that<br /><span class="dim">refuses to be trusted on faith.</span></h1>
+    <p class="lede">
+      <strong>agent-sdk pimo</strong> is an agent SDK and runtime that stays on your machine.
+      No runtime dependencies, no telemetry, no interception of anything.
+      Every claim it makes about itself is backed by an oracle that fails loudly
+      when the underlying thing is not actually working.
+    </p>
+
+    <div class="chips">
+      <div class="chip"><b>0</b><span>runtime dependencies</span></div>
+      <div class="chip"><b>0</b><span>outbound calls by default</span></div>
+      <div class="chip"><b>167</b><span>tests, all passing</span></div>
+      <div class="chip"><b>4</b><span>client dialects served</span></div>
+    </div>
+
+    <pre class="hero-cmd"><code><span class="p">$</span> npm run setup
+<span class="o">[1/7]</span> build already present
+<span class="ok">[5/7]</span> /health -&gt; 200 at http://127.0.0.1:8477
+<span class="ok">[6/7]</span> resident started and exited cleanly
+<span class="ok">[7/7]</span> registration -&gt; every hop exists on disk
+<span class="ok">PASS</span>: installed, supervised at logon, and proven reachable.</code></pre>
+  </section>
+
+  <section class="wrap band" id="premise">
+    <div class="band-head">
+      <span class="num">01</span>
+      <h2>The premise</h2>
+    </div>
+    <div class="cols">
+      <div>
+        <p>
+          Most agent tooling is a black box that talks to a server you cannot inspect.
+          This is the opposite shape: a composition root you can read end to end, a
+          daemon that binds to <code>127.0.0.1</code> and refuses anything else, and
+          an offline provider that works before you configure a single key.
+        </p>
+        <p>
+          It is <strong>generic</strong>. The core knows about
+          <code>Provider</code>, <code>Agent</code>, <code>Session</code>,
+          <code>Project</code> and <code>Tool</code> — not about any vendor. Any host
+          application is one adapter among several, and the core does not know any
+          of them exist.
+        </p>
+      </div>
+      <ul class="ticks">
+        <li><b>Dependency-free core.</b> Node standard library only, so every behaviour is auditable in the repository.</li>
+        <li><b>Runs offline.</b> The network is reached only when a provider you explicitly configure requires it.</li>
+        <li><b>Honest integrations.</b> A configured-but-unreachable integration reports <em>why</em> instead of a fake ok.</li>
+        <li><b>Secrets by reference.</b> <code>$ENV_VAR</code> or <code>envfile:&lt;path&gt;</code>. An inline literal is refused at the resolver.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="wrap band" id="shape">
+    <div class="band-head">
+      <span class="num">02</span>
+      <h2>The shape</h2>
+    </div>
+
+    <pre class="diagram"><code> host application
+    │  normal operation, unchanged — its own auth, its own servers
+    │
+    └── .agents/mcp.json  ──stdio JSON-RPC──▶  MCP adapter
+                                                    │  HTTP 127.0.0.1 + token
+                                                    ▼
+                                            local daemon ──▶ runtime
+                                                              │
+                        agents · sessions · projects · tools · context · memory
+                        providers · models · MCP · workflows · events</code></pre>
+
+    <p class="note">
+      Two process boundaries, one protocol. The MCP adapter is deliberately
+      <em>stateless</em>: it translates each call into a daemon HTTP call instead of
+      holding runtime state, so a host can restart it freely and lose nothing.
+    </p>
+
+    <div class="grid">
+      <div class="cell">
+        <h3>One installer, idempotent by construction</h3>
+        <p>
+          Every step reports <code>created</code>, <code>updated</code>,
+          <code>unchanged</code> or <code>skipped</code>. Running it twice changes
+          nothing the second time — because an installer you cannot safely re-run
+          is not an installer.
+        </p>
+      </div>
+      <div class="cell">
+        <h3>Survives a reboot, then proves it</h3>
+        <p>
+          A Windows logon task supervises the daemon in the foreground with an
+          unbounded failure budget. Measured cold restore from nothing:
+          <b>3.0&nbsp;s</b> to a live <code>/health</code> and a full readiness verdict.
+        </p>
+      </div>
+      <div class="cell">
+        <h3>Least privilege by default</h3>
+        <p>
+          Capabilities are denied unless a rule grants them, longest scope wins.
+          A per-invocation grant applies to that call only and never widens the
+          session. No write, delete or spawn tools ship.
+        </p>
+      </div>
+      <div class="cell">
+        <h3>Redaction at the sink</h3>
+        <p>
+          Every value leaving the process passes through one redaction point, every
+          SSE frame through one framing function. Secrets are never stored at rest
+          in the repository.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap band" id="boundary">
+    <div class="band-head">
+      <span class="num">03</span>
+      <h2>The boundary</h2>
+      <p class="band-sub">Not preferences. Changing any of these breaks the premise.</p>
+    </div>
+
+    <div class="rules">
+      <div class="rule">
+        <span class="rule-n">1</span>
+        <div>
+          <h4>No interception</h4>
+          <p>The runtime <em>serves</em> an MCP server. It never reverse-engineers, impersonates, proxies, intercepts or redirects a host's traffic. The host keeps running its own servers, untouched.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <span class="rule-n">2</span>
+        <div>
+          <h4>No telemetry</h4>
+          <p><code>telemetry</code> is typed <code>false</code>. Setting it <code>true</code> is a hard configuration error, not a warning. No field reports outward.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <span class="rule-n">3</span>
+        <div>
+          <h4>No secrets in the repository</h4>
+          <p>Secrets are referenced as <code>$ENV_VAR</code> or <code>envfile:&lt;path&gt;</code>. The resolver refuses an inline literal, so a secret cannot be committed by accident.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <span class="rule-n">4</span>
+        <div>
+          <h4>Loopback only</h4>
+          <p>A non-loopback bind host is a configuration <em>error</em>. Any request carrying an <code>Origin</code> header is refused, and a non-loopback <code>Host</code> header is refused as a DNS-rebinding guard.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <span class="rule-n">5</span>
+        <div>
+          <h4>Default-deny</h4>
+          <p>Capabilities are denied unless a rule grants them; longest scope wins. MCP tools require <code>mcp.use</code>, which is denied by default.</p>
+        </div>
+      </div>
+      <div class="rule">
+        <span class="rule-n">6</span>
+        <div>
+          <h4>Private, unlicensed, never published</h4>
+          <p>Not on any registry. Nothing is uploaded. This site is the only public surface, and it carries no data.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap band" id="doors">
+    <div class="band-head">
+      <span class="num">04</span>
+      <h2>Four front doors</h2>
+      <p class="band-sub">One runtime, four dialects. Point anything that speaks one of these at it.</p>
+    </div>
+
+    <table class="doors">
+      <thead>
+        <tr><th>endpoint</th><th>dialect</th><th>who speaks it</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>/v1/*</code></td><td>native</td><td>this SDK's own tools and CLI</td></tr>
+        <tr><td><code>/v1/chat/completions</code></td><td>OpenAI</td><td>any OpenAI client, most agent toolchains</td></tr>
+        <tr><td><code>/v1/messages</code></td><td>Anthropic Messages</td><td>Claude SDKs and CLIs</td></tr>
+        <tr><td><code>/v1/events</code></td><td>SSE</td><td>live event stream</td></tr>
+      </tbody>
+    </table>
+
+    <p class="note">
+      All three POST surfaces accept the same token as
+      <code>x-agent-sdk-token</code>, <code>Authorization: Bearer</code>, or
+      <code>x-api-key</code> — so a client that can only set one of those still
+      authenticates. <code>/health</code> is the only unauthenticated route.
+    </p>
+  </section>
+
+  <section class="wrap band" id="oracles">
+    <div class="band-head">
+      <span class="num">05</span>
+      <h2>The oracles</h2>
+      <p class="band-sub">
+        Exit code 0 from a script that started nothing is the failure mode this
+        whole design exists to eliminate. So success here means something was
+        observed from outside the process.
+      </p>
+    </div>
+
+    <table class="oracles">
+      <thead>
+        <tr><th>#</th><th>oracle</th><th>proves</th><th>failure mode it was written for</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="n">1</td>
+          <td><code>/health</code> observed over HTTP</td>
+          <td>a socket answered from outside the process</td>
+          <td>a daemon that exited 0 without binding</td>
+        </tr>
+        <tr>
+          <td class="n">2</td>
+          <td><code>doctor --json → readiness.ok</code></td>
+          <td>every component reported itself</td>
+          <td>reading <code>components</code> from the wrong object path</td>
+        </tr>
+        <tr>
+          <td class="n">3</td>
+          <td>resident verdict in the supervisor log</td>
+          <td>the integration actually started</td>
+          <td>a supervisor built to carry on when the resident fails</td>
+        </tr>
+        <tr>
+          <td class="n">4</td>
+          <td>registration resolves on disk</td>
+          <td>a fresh session can reach this build</td>
+          <td>a stale path that still lists tools and dies on first call</td>
+        </tr>
+        <tr>
+          <td class="n">5</td>
+          <td><code>probe.ok: true</code></td>
+          <td>host → adapter → daemon → provider → response</td>
+          <td><code>/health</code> proving nothing about the model</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <h4>Anchors come from the same writer as the evidence</h4>
+      <p>
+        Oracle 3 once anchored to the scheduler's <code>LastRunTime</code>, which
+        can be stamped <em>after</em> the supervisor process wrote its verdict. A
+        warm re-run then filtered out a genuine pass and reported failure on a
+        perfectly healthy stack. The fix was not a wider tolerance window: the
+        supervisor now stamps an instance id as its own first log line, and the
+        oracle anchors to that. Same writer, same clock, no skew.
+      </p>
+    </div>
+  </section>
+
+  <section class="wrap band" id="install">
+    <div class="band-head">
+      <span class="num">06</span>
+      <h2>Install</h2>
+    </div>
+
+    <pre class="block"><code>git clone &lt;this repo&gt; agent-sdk-pimo
+cd agent-sdk-pimo
+npm install
+npm run build
+
+npm run setup        # build, install, supervise at logon, prove it</code></pre>
+
+    <p class="note">
+      <code>install</code> registers the MCP server at <b>user level</b>, so any
+      host in any directory finds it, and it starts the daemon — so you never have
+      to run <code>daemon start</code> yourself.
+    </p>
+
+    <div class="grid">
+      <div class="cell">
+        <h3><code>npm run verify:registration</code></h3>
+        <p>Read-only. Reads the registration a host will actually read and touches the filesystem for every hop. No writes — a diagnostic that repairs what it is diagnosing cannot be trusted to report.</p>
+      </div>
+      <div class="cell">
+        <h3><code>npm run prove:plug-and-play</code></h3>
+        <p>Cold spawns the entry point from a directory this runtime has never seen, with no daemon running, and asserts the real handshake plus a real generation.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <h4>What is not claimed here</h4>
+      <p>
+        No real reboot has been performed, so the logon trigger itself is unproven —
+        what is proven is that the task's <em>action</em> restores the stack from
+        nothing in about three seconds. One integration suite has a pre-existing
+        failure unrelated to this work and is left untouched. Where an integration
+        is configured but unavailable, the runtime says so and explains why instead
+        of pretending.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <div class="foot">
+    <div>
+      <span class="mark-name">agent-sdk&nbsp;<em>pimo</em></span>
+      <p class="muted">Private repository. Unlicensed. Never published to a registry.</p>
+    </div>
+    <div class="muted small">
+      <p>Loopback only &middot; no telemetry &middot; no runtime dependencies</p>
+      <p>Zero external requests on this page. No fonts, no trackers, no CDNs.</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
