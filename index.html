@@ -441,10 +441,11 @@ footer { border-top: 1px solid var(--line-soft); margin-top: 30px; }
     </div>
 
     <pre class="hero-cmd"><code><span class="p">$</span> npm run setup
-<span class="o">[1/7]</span> build already present
-<span class="ok">[5/7]</span> /health -&gt; 200 at http://127.0.0.1:8477
-<span class="ok">[6/7]</span> resident started and exited cleanly
-<span class="ok">[7/7]</span> registration -&gt; every hop exists on disk
+<span class="o">[1/8]</span> build already present
+<span class="ok">[5/8]</span> /health -&gt; 200 at http://127.0.0.1:8477
+<span class="ok">[6/8]</span> resident started and exited cleanly
+<span class="ok">[7/8]</span> registration -&gt; every hop exists on disk
+<span class="ok">[8/8]</span> hygiene -&gt; local-only patterns live only in .git/info/exclude
 <span class="ok">PASS</span>: installed, supervised at logon, and proven reachable.</code></pre>
   </section>
 
@@ -664,6 +665,12 @@ footer { border-top: 1px solid var(--line-soft); margin-top: 30px; }
           <td>host → adapter → daemon → provider → response</td>
           <td><code>/health</code> proving nothing about the model</td>
         </tr>
+        <tr>
+          <td class="n">6</td>
+          <td>tracked tree carries nothing local-only</td>
+          <td>the published repo names nothing private</td>
+          <td>a committed <code>.gitignore</code> publishing the very folder it hides</td>
+        </tr>
       </tbody>
     </table>
 
@@ -707,6 +714,10 @@ npm run setup        # build, install, supervise at logon, prove it</code></pre>
       <div class="cell">
         <h3><code>npm run prove:plug-and-play</code></h3>
         <p>Cold spawns the entry point from a directory this runtime has never seen, with no daemon running, and asserts the real handshake plus a real generation.</p>
+      </div>
+      <div class="cell">
+        <h3><code>npm run verify:hygiene</code></h3>
+        <p>Read-only. A <code>.gitignore</code> is committed and served to anyone, so a line naming a private or per-machine folder publishes the name it hides. Those patterns live in <code>.git/info/exclude</code>, which git never commits. This proves the tracked tree carries nothing local-only and that the split has not drifted.</p>
       </div>
     </div>
 
